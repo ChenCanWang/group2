@@ -3,7 +3,7 @@
       implicit none
       integer i,j,ntmp
       real*8 H(6,6),eigenv(6),work(18)
-      real*8 g
+      real*8 g,exact
 
       !g=-1.
       write(*,*)' Enter interaction strength'
@@ -38,6 +38,9 @@
       write(6,*)'eigenvalues'
       write(6,*)eigenv
       
+      exact=minval(eigenv)-(2.-g)
+      write(6,*)'Correlation energy'
+      write(6,'(1x,f8.3)')exact
 
       end
            
