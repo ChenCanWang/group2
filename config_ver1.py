@@ -31,7 +31,7 @@ while 1:
 	if len(states) == Cmn(line,particle): 
 		break  
 	i=i+1
-
+print('all states:' '\n')
 print(states)
 def trans(n):
   s = []
@@ -56,7 +56,7 @@ for i in range(dim):
 for i in range(dim):
  	if pair.count(i) == particle/2:
  		fullpair.append(i)
-
+print('\n' 'only full pairs:' '\n')
 print(fullpair)
 H = np.eye(dim)
 g=1.0
@@ -72,7 +72,7 @@ for i in range(dim):
 			if i in pair and j in pair:
 				H[i,j] = -g/2
 #uncomplete 
-print(H)			
+#print(H)			
 
 
 
