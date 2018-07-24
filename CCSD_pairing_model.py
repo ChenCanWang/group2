@@ -3,16 +3,12 @@ import numpy as np
 import math, sys, os, glob
 import matplotlib.pyplot as plt
 
-
-
 #give input values
 #where lines means degenerate states
 particle = 6
 line = 6
 gval=0.5
 delta = 1.0
-
-
 
 # set the particles to pairs
 pair = particle/2
@@ -23,7 +19,6 @@ if(particle%2 != 0):
 if(pair>line):
 	print('Wrong configuration.')
 	exit(0)
-
 
 if(pair==1):
 	states=[ i for i in range(line)]
@@ -43,7 +38,6 @@ elif(pair==4):
 	                    if j!=i and k!=j and l!=k]
 
 config_num  = len(states)
-
 print('There are %d states: \n'  %config_num)
 print(states)
 
@@ -84,30 +78,25 @@ H = np.eye(config_num)
 Hc= [ ['123' for i in range(config_num)]
       for i in range(config_num)]
 
-
 # The form of the matrix...
 #print('The form of the matrix is: \n')
 for i in range(config_num):
 	for j in range(config_num):
 		Hc[i][j]='-'+str(int(h_pr(states[i],states[j])))+'g'
 		if(i==j):
-			Hc[i][j] = Hc[i][j]
-#                   + '+' \
-#			       + str(int(2*delta*h_sp(states[i])))   \
-#			       +'d'
-
+			Hc[i][j] = Hc[i][j] \
+                   + '+' \
+			       + str(int(2*delta*h_sp(states[i])))   \
+			       +'d'
 
 #for i in range(len(states)):
 #	print(Hc[i])
-
 print('\n')
 
 coupling = np.linspace(-1,1,11)
 
 egv = [] # as the eigenvalue of H
 crt = [] # as the correlation energy
-
-
 
 # find the minimum of the eigenvalues
 for g in coupling:
@@ -118,7 +107,6 @@ for g in coupling:
 			if(i==j):
 				H[i,j] = H[i,j] + delta*h_sp(states[i])
 
-
     # get the eigenvalues of H
 	u, v = np.linalg.eig(H)
 	egv.append(min(u))
@@ -128,18 +116,20 @@ for g in coupling:
 	else:
 		crt.append(min(u)- sum(states[0])* delta + 2*g)
 
-#set fermi level
+#####----set new part for CCD of pairing model----#####
+
+#set fermi level, start counting states at 0
 def flevel(number):
     return number-1
 
-#set valence space defined by number of lines
+#set valence space defined by total number of lines, start counting at 0
 def exspace(levels):
     return (2*levels)-1
 
 fermi=flevel(particle)
 vspace=exspace(line)
 
-#single particle part contributes only for diagonal
+#fockt matrix, single particle part contributes only for diagonal
 def fpq(p,q,gval):
 	if p != q:
 		return 0
@@ -149,8 +139,7 @@ def fpq(p,q,gval):
 		return math.ceil((p-fermi)/2.0)*delta
 
 #define two-body interaction and check of a,b and i,j are paired
-#differ pppp pphh (transpose to hhpp) and V_hhhh
-#start counting a and b from Fermi level, so substract number of particles in array
+#imply antisymmety for different cases
 def vint(a,b,i,j,gval):
 	if math.floor(a/2.0) == math.floor(b/2.0) and math.floor(i/2.0) == math.floor(j/2.0) and a!=b and i!=j:
 		if a < b and i < j:
@@ -164,7 +153,8 @@ def vint(a,b,i,j,gval):
 	else:
 		return 0
 
-
+#differ pppp pphh (transpose to hhpp) and V_hhhh
+#start counting a and b from Fermi level, so substract fermilevel in array
 v_pphh = np.zeros(shape=(vspace-fermi, vspace-fermi, fermi+1, fermi+1))
 v_pppp = np.zeros(shape=(vspace-fermi, vspace-fermi, vspace-fermi, vspace-fermi))
 v_hhhh = np.zeros(shape=(fermi+1, fermi+1, fermi+1, fermi+1))
@@ -175,7 +165,6 @@ for matrix in (v_pphh, v_pppp, v_hhhh):
 			for i in range(np.size(matrix,2)):
 				for j in range(np.size(matrix,3)):
 					matrix[a,b,i,j]=vint(a,b,i,j,gval)
-
 v_hhpp = v_pphh.T
 
 #defining the two fock matrices
@@ -191,17 +180,17 @@ for p in range(np.size(f_pp,0)):
 		f_pp[p,q] = fpq(p+particle,q+particle,gval)
 
 
-#define T2 array
-tfactor= np.zeros(shape=(vspace-fermi,vspace-fermi,fermi+1,fermi+1))
+#define T2 array for starting point, e.g. PT
+tstart= np.zeros(shape=(vspace-fermi,vspace-fermi,fermi+1,fermi+1))
 #set up Hamiltonian
 hbar= np.zeros(shape=(vspace-fermi,vspace-fermi,fermi+1,fermi+1))
 
 #starting point from PT for t0
-for a in range(np.size(tfactor,0)):
-	   for b in range(np.size(tfactor,1)):
-		   for i in range(np.size(tfactor,2)):
-			   for j in range(np.size(tfactor,3)):
-				   tfactor[a,b,i,j]= v_pphh[a,b,i,j] / (f_pp[a,a]+f_pp[b,b]-f_hh[i,i]-f_hh[j,j])
+for a in range(np.size(tstart,0)):
+	   for b in range(np.size(tstart,1)):
+		   for i in range(np.size(tstart,2)):
+			   for j in range(np.size(tstart,3)):
+				   tstart[a,b,i,j]= v_pphh[a,b,i,j] / (f_pp[a,a]+f_pp[b,b]-f_hh[i,i]-f_hh[j,j])
 
 #initialize division matrix in recursive formel for t
 fsum= np.zeros(shape=(vspace-fermi,vspace-fermi,fermi+1,fermi+1))
@@ -232,4 +221,26 @@ def tfunc(t):
 	t = t + hbar / fsum
 	return t
 
-print(tfunc(tfactor)[0,1])
+#iterative function to return new correlation energy
+def iterative(t):
+	ecorr= 1/4.0*np.einsum('ijab,abij->', v_hhpp, t)
+	tnew=tfunc(t)
+	ecorrnew= 1/4.0*np.einsum('ijab,abij->', v_hhpp, tnew)
+	return (ecorrnew, abs(ecorr-ecorrnew), tnew)
+
+#set maximal steps of iterations and convergence criterium
+itermax=20
+eps=0.01
+titer=tstart
+
+for iter in range(itermax):
+	t=titer
+	result=iterative(t)
+	ecorr=result[0]
+	deltecorr=result[1]
+	print('step ', iter, '  correlation energy  ', ecorr, '  delta E  ', deltecorr)
+	titer=result[2]
+	if deltecorr < eps:
+		break
+	if iter == itermax-1 and deltecorr > eps:
+		print('!!! no convergeged results after ', iter + 1, ' iteration steps !!!')
