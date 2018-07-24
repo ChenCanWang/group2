@@ -6,9 +6,10 @@ import matplotlib.pyplot as plt
 
 
 #give input values
+#where lines means degenerate states
 particle = 6
 line = 6
-gval=0.0
+gval=0.5
 delta = 1.0
 
 
@@ -85,7 +86,7 @@ Hc= [ ['123' for i in range(config_num)]
 
 
 # The form of the matrix...
-print('The form of the matrix is: \n')
+#print('The form of the matrix is: \n')
 for i in range(config_num):
 	for j in range(config_num):
 		Hc[i][j]='-'+str(int(h_pr(states[i],states[j])))+'g'
@@ -148,10 +149,10 @@ def fpq(p,q,gval):
 		return math.ceil((p-fermi)/2.0)*delta
 
 #define two-body interaction and check of a,b and i,j are paired
-#differ V_pppp V_pphh (transpose to V_hhpp) and V_hhhh
+#differ pppp pphh (transpose to hhpp) and V_hhhh
 #start counting a and b from Fermi level, so substract number of particles in array
 def vint(a,b,i,j,gval):
-    if math.floor(a/2.0) == math.floor(b/2.0) and math.floor(i/2.0) == math.floor(j/2.0) and a!=b and i!=j:
+	if math.floor(a/2.0) == math.floor(b/2.0) and math.floor(i/2.0) == math.floor(j/2.0) and a!=b and i!=j:
 		if a < b and i < j:
 			return -gval
 		if a < b and i > j:
@@ -160,7 +161,7 @@ def vint(a,b,i,j,gval):
 			return gval
 		if a > b and i > j:
 			return -gval
-    else:
+	else:
 		return 0
 
 
@@ -169,8 +170,8 @@ v_pppp = np.zeros(shape=(vspace-fermi, vspace-fermi, vspace-fermi, vspace-fermi)
 v_hhhh = np.zeros(shape=(fermi+1, fermi+1, fermi+1, fermi+1))
 
 for matrix in (v_pphh, v_pppp, v_hhhh):
-    for a in range(np.size(matrix,0)):
-	    for b in range(np.size(matrix,1)):
+	for a in range(np.size(matrix,0)):
+		for b in range(np.size(matrix,1)):
 			for i in range(np.size(matrix,2)):
 				for j in range(np.size(matrix,3)):
 					matrix[a,b,i,j]=vint(a,b,i,j,gval)
@@ -190,15 +191,45 @@ for p in range(np.size(f_pp,0)):
 		f_pp[p,q] = fpq(p+particle,q+particle,gval)
 
 
-print(f_pp)
-print(f_hh)
-
 #define T2 array
 tfactor= np.zeros(shape=(vspace-fermi,vspace-fermi,fermi+1,fermi+1))
-
-
 #set up Hamiltonian
-#def hbar(t,i,j,a,b,gval):
-#    return tbint(a,b,i,j,gval) +  t[i,j,a,b]*(fpq(b,g)+fpq(a,g)-fpq(i,g)-fpq(j,g))
+hbar= np.zeros(shape=(vspace-fermi,vspace-fermi,fermi+1,fermi+1))
 
-#print(hbar(1,0,0,1,2))
+#starting point from PT for t0
+for a in range(np.size(tfactor,0)):
+	   for b in range(np.size(tfactor,1)):
+		   for i in range(np.size(tfactor,2)):
+			   for j in range(np.size(tfactor,3)):
+				   tfactor[a,b,i,j]= v_pphh[a,b,i,j] / (f_pp[a,a]+f_pp[b,b]-f_hh[i,i]-f_hh[j,j])
+
+#initialize division matrix in recursive formel for t
+fsum= np.zeros(shape=(vspace-fermi,vspace-fermi,fermi+1,fermi+1))
+for a in range(np.size(fsum,0)):
+		  for b in range(np.size(fsum,1)):
+			  for i in range(np.size(fsum,2)):
+				  for j in range(np.size(fsum,3)):
+					  fsum[a,b,i,j]= f_pp[a,a]+f_pp[b,b]-f_hh[i,i]-f_hh[j,j]
+
+def tfunc(t):
+	#intermediate chis for diagrams 7,8,9, and 10
+	intermedchi_alid= 1/2.0*np.einsum('klcd,acik->alid', v_hhpp, t)
+	intermedchi_li= 1/2.0*np.einsum('klcd,cdik->li', v_hhpp, t)
+	intermedchi_ad= 1/2.0*np.einsum('klcd,ackl->ad', v_hhpp, t)
+	intermedchi_klij= 1/4.0*np.einsum('klcd,cdij->klij', v_hhpp, t)
+
+	hbar= v_pphh \
+	 	+ np.einsum('bc,acij->abij', f_pp, t) - np.einsum('ac,bcij->abij', f_pp, t) \
+		- np.einsum('kj,abik->abij', f_hh, t) + np.einsum('ki,abjk->abij', f_hh, t) \
+		+ 1/2.0*np.einsum('abcd,cdij->abij', v_pppp, t) \
+		+ 1/2.0*np.einsum('klij,abkl->abij', v_hhhh, t) \
+		+ np.einsum('alid,dblj->abij', intermedchi_alid, t) - np.einsum('blid,dalj->abij', intermedchi_alid, t) \
+		- np.einsum('aljd,dbli->abij', intermedchi_alid, t) + np.einsum('bljd,dali->abij', intermedchi_alid, t) \
+		+ np.einsum('li,ablj->abij', intermedchi_li, t) - np.einsum('lj,abli->abij', intermedchi_li, t) \
+		+ np.einsum('ad,dbij->abij', intermedchi_ad, t) - np.einsum('bd,daij->abij', intermedchi_ad, t) \
+		+ np.einsum('klij,abkl->abij', intermedchi_klij, t)
+
+	t = t + hbar / fsum
+	return t
+
+print(tfunc(tfactor)[0,1])
