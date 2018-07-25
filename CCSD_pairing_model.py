@@ -5,10 +5,12 @@ import matplotlib.pyplot as plt
 
 #give input values
 #where lines means degenerate states
-particle = 6
-line = 6
-gval=0.5
+particle = 4
+line = 4
+gval=0.7
 delta = 1.0
+#coupling = np.linspace(-1,1,11)
+
 
 # set the particles to pairs
 pair = particle/2
@@ -37,9 +39,17 @@ elif(pair==4):
 	                    for l in range(k,line)
 	                    if j!=i and k!=j and l!=k]
 
+elif(pair==5):
+	states = [(i,j,k,l,m) for i in range(line)
+	                      for j in range(i,line)
+	                      for k in range(j,line)
+	                      for l in range(k,line)
+	                      for m in range(l,line)
+	                      if j!=i and k!=j and l!=k and m!=l]
+
 config_num  = len(states)
-print('There are %d states: \n'  %config_num)
-print(states)
+#print('There are %d states: \n'  %config_num)
+#print(states)
 
 # evaluate the sp operator
 def h_sp(A):
@@ -91,21 +101,22 @@ for i in range(config_num):
 
 #for i in range(len(states)):
 #	print(Hc[i])
-print('\n')
 
-coupling = np.linspace(-1,1,11)
+
 
 egv = [] # as the eigenvalue of H
 crt = [] # as the correlation energy
 
 # find the minimum of the eigenvalues
-for g in coupling:
+#for g in coupling:
+g = gval
+if g == gval:
 # construction of the Hamiltonian
 	for i in range(config_num):
 		for j in range(config_num):
 			H[i,j]=-g*h_pr(states[i],states[j])
 			if(i==j):
-				H[i,j] = H[i,j] + delta*h_sp(states[i])
+				H[i,j] = H[i,j] + 2*delta*h_sp(states[i])
 
     # get the eigenvalues of H
 	u, v = np.linalg.eig(H)
@@ -114,7 +125,8 @@ for g in coupling:
 	if(pair==1):
 	    crt.append(min(u) + 2*g)
 	else:
-		crt.append(min(u)- sum(states[0])* delta + 2*g)
+		crt.append(min(u)- sum(states[0])*2*delta + 2*g)
+	print('\n', 'correlation energy by FCI     ', round(crt[0],4), '\n')
 
 #####----set new part for CCD of pairing model----#####
 
@@ -134,9 +146,9 @@ def fpq(p,q,gval):
 	if p != q:
 		return 0
 	elif p in range(particle):
-		return math.ceil((p-fermi)/2.0)*delta - gval
+		return math.floor((p)/2.0)*delta - gval
 	else:
-		return math.ceil((p-fermi)/2.0)*delta
+		return math.floor((p)/2.0)*delta
 
 #define two-body interaction and check of a,b and i,j are paired
 #imply antisymmety for different cases
@@ -179,7 +191,6 @@ for p in range(np.size(f_pp,0)):
 	for q in range(np.size(f_pp,1)):
 		f_pp[p,q] = fpq(p+particle,q+particle,gval)
 
-
 #define T2 array for starting point, e.g. PT
 tstart= np.zeros(shape=(vspace-fermi,vspace-fermi,fermi+1,fermi+1))
 #set up Hamiltonian
@@ -190,7 +201,7 @@ for a in range(np.size(tstart,0)):
 	   for b in range(np.size(tstart,1)):
 		   for i in range(np.size(tstart,2)):
 			   for j in range(np.size(tstart,3)):
-				   tstart[a,b,i,j]= v_pphh[a,b,i,j] / (f_pp[a,a]+f_pp[b,b]-f_hh[i,i]-f_hh[j,j])
+				   tstart[a,b,i,j]= -v_pphh[a,b,i,j] / (f_pp[a,a]+f_pp[b,b]-f_hh[i,i]-f_hh[j,j])
 
 #initialize division matrix in recursive formel for t
 fsum= np.zeros(shape=(vspace-fermi,vspace-fermi,fermi+1,fermi+1))
@@ -218,7 +229,7 @@ def tfunc(t):
 		+ np.einsum('ad,dbij->abij', intermedchi_ad, t) - np.einsum('bd,daij->abij', intermedchi_ad, t) \
 		+ np.einsum('klij,abkl->abij', intermedchi_klij, t)
 
-	t = t + hbar / fsum
+	t = t - hbar / fsum
 	return t
 
 #iterative function to return new correlation energy
@@ -229,8 +240,8 @@ def iterative(t):
 	return (ecorrnew, abs(ecorr-ecorrnew), tnew)
 
 #set maximal steps of iterations and convergence criterium
-itermax=20
-eps=0.01
+itermax=100
+eps=0.00001
 titer=tstart
 
 for iter in range(itermax):
@@ -238,9 +249,29 @@ for iter in range(itermax):
 	result=iterative(t)
 	ecorr=result[0]
 	deltecorr=result[1]
-	print('step ', iter, '  correlation energy  ', ecorr, '  delta E  ', deltecorr)
+	if iter < 10:
+		print('step ', iter, '   correlation energy  ', round(ecorr,4), '  delta E  ', round(deltecorr,4))
+	elif iter > 9:
+		print('step ', iter, '  correlation energy  ', round(ecorr,4), '  delta E  ', round(deltecorr,4))
+	elif iter > 99:
+		print('step ', iter, ' correlation energy  ', round(ecorr,4), '  delta E  ', round(deltecorr,4))
 	titer=result[2]
 	if deltecorr < eps:
 		break
 	if iter == itermax-1 and deltecorr > eps:
 		print('!!! no convergeged results after ', iter + 1, ' iteration steps !!!')
+
+print('difference of FCI and CCD  ' ,round(abs(ecorr-crt[0]),10))
+
+plt.tick_params(width=20,direction='in',
+	            labelsize='large')
+plt.figure(figsize=(6,5),dpi=60)
+
+#plt.plot(coupling,crt,'r-o',lw=2.5)
+#plt.plot(coupling,crt,'r-o',lw=2.5)
+#plt.plot((-1,1),(0,0),'b--',lw=1.0)
+#plt.xlim(-1,1)
+#plt.ylim(-5,5)
+#plt.xlabel('coupling stength $g$ ',fontsize=12)
+#plt.ylabel('Correlation energy',fontsize=12)
+#plt.savefig('comp_FCI_CCD_pairing.pdf',format='pdf')
