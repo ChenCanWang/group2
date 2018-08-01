@@ -35,7 +35,7 @@ magica2=66
 
 i = 0
 if plotpar == 0:
-    for Nmax in range(1,3,1):
+    for Nmax in range(1,4,1):
         datacorr = np.loadtxt ('data/correlation_energy_minnesota_Nmax_' + str(Nmax) + '_A_' + str(magica) + '.txt')
         pl.plot( datacorr[:,0], datacorr[:,1], color = colors[i],  marker="o",\
          markersize = 4.5, linewidth=1, label ="N$_{\\rm{Max}}$=" + str(Nmax))
@@ -53,7 +53,7 @@ if plotpar == 0:
     ax.xaxis.set_major_locator(MultipleLocator(0.02))
     pl.tick_params(axis='both', which='major', labelsize=10)
     pl.xlabel('$\\rho$ (fm$^{-3}$)')
-    pl.ylabel('E$_{\\rm{Corr}}$', fontsize=14)
+    pl.ylabel('E$_{\\rm{Corr}}$ (MeV)', fontsize=14)
     pl.legend(loc='lower left', fontsize=12,ncol=1,markerscale=1,numpoints=1,prop={'size':12})
 
     rc('text', usetex=True)
@@ -72,7 +72,7 @@ if plotpar == 0:
 
 
 else:
-    for Nmax in range(1,3,1):
+    for Nmax in range(1,4,1):
         datahf = np.loadtxt ('data/hf_energy_minnesota_Nmax_' + str(Nmax) + '_A_' + str(magica) + '.txt')
         datacorr = np.loadtxt ('data/correlation_energy_minnesota_Nmax_' + str(Nmax) + '_A_' + str(magica) + '.txt')
         pl.plot( datahf[:,0], datahf[:,1]+datacorr[:,1], color = colors[i],\
@@ -104,7 +104,7 @@ else:
     ax.xaxis.set_minor_locator(MultipleLocator(0.005))
     ax.xaxis.set_major_locator(MultipleLocator(0.02))
     pl.tick_params(axis='both', which='major', labelsize=10)
-    pl.ylabel('E$_{\\rm{HF}}$ + E$_{\\rm{Corr}}$', fontsize=14)
+    pl.ylabel('E$_{\\rm{HF}}$ + E$_{\\rm{Corr}}$ (MeV)', fontsize=14)
     pl.xlabel('$\\rho$ (fm$^{-3}$)')
     pl.legend(loc='lower left', fontsize=12,ncol=1,markerscale=1,numpoints=1,prop={'size':12})
     pl.savefig('CCD_PNM_results_ehf.pdf', format='PDF')
